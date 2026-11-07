@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>BrandLens</title>
+<style>
+:root{--bg:#f6f7fb;--cd:#fff;--tx:#1b2330;--mu:#5b6678;--bd:#dde2ec;--ac:#1f3a68;--hi:#fde2e2;--me:#fff1cc;--lo:#e3effd;--ok:#dff5e3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f141c;--cd:#171e29;--tx:#e8edf5;--mu:#9aa6b8;--bd:#2a3445;--ac:#8fb4ff;--hi:#4a2226;--me:#4a3d16;--lo:#1b3050;--ok:#1d3b27}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:var(--cd);border-bottom:1px solid var(--bd);padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+h1{font-size:19px;margin:0;color:var(--ac)}main{max-width:980px;margin:auto;padding:12px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+button,select,input,textarea{font:inherit;color:var(--tx);background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:6px 10px}
+button{cursor:pointer}button.p{background:var(--ac);color:var(--bg);border-color:var(--ac)}button.on{border-color:var(--ac);font-weight:600}button:disabled{opacity:.4;cursor:not-allowed}
+.c{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+textarea{width:100%;min-height:130px;box-sizing:border-box}.pv{white-space:pre-wrap;word-break:break-word}
+mark{border-radius:4px;padding:0 2px;color:inherit}.high{background:var(--hi)}.medium{background:var(--me)}.low{background:var(--lo)}
+.f{border-left:5px solid var(--bd);padding:8px 10px;margin:8px 0;background:var(--bg);border-radius:8px}.f.high{border-color:#d33}.f.medium{border-color:#d9a400}.f.low{border-color:#3b82d6}
+.m{color:var(--mu);font-size:13px}.tag{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--lo);font-size:12px}.ok{background:var(--ok)}
+.b{height:8px;background:var(--ac);border-radius:4px}.w{overflow-x:auto}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--bd);padding:6px;text-align:left}
+</style></head><body>
+<header><h1>BrandLens <span class="m">pre-publication brand review</span></h1><label class="m">Role <select id="role"></select></label></header>
+<main><nav id="nav"></nav><div id="v"></div></main>
+<script>
+const $=s=>document.querySelector(s),E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DEF={g:[{id:'C-2',text:'Superlative, health or comparative claims need an approved source.'},{id:'V-3',text:'Voice is warm and professional: no slang, repeated punctuation or shouting.'},{id:'T-1',text:'Use approved terminology only.'},{id:'A-1',text:'Every image needs alt text.'},{id:'A-2',text:'Text contrast must be at least 4.5:1.'},{id:'A-3',text:'Keep sentences under 30 words.'}],
+f:[{id:'F-14',text:'Made from 100% fruit with no added sugar'},{id:'F-15',text:'A 1 litre pack costs ₹120'},{id:'F-16',text:'Sold in 12 Indian states'}],
+b:[{term:'cheap',fix:'affordable',rule:'T-1'},{term:'guys',fix:'everyone',rule:'V-3'},{term:'grab it now',fix:'Try it today',rule:'V-3'}],pal:['#1F3A68','#FFFFFF','#F2A900','#1B2330']};
+const SAMPLE='Our juice is the healthiest drink in India.\nHey guys!! Grab it now!!! It is a cheap treat. A 1 litre pack costs ₹150.\nMade from 100% fruit with no added sugar.\n![](juice.png)';
+let S=null;try{S=JSON.parse(localStorage.getItem('bl4')||'null')}catch(e){}
+S=S||{kb:DEF,text:SAMPLE,v:[],status:'Draft',com:[],log:[],stats:{},rej:{},seen:{},over:0,f:[],role:'Creator',tab:'Review'};
+const save=()=>{try{localStorage.setItem('bl4',JSON.stringify(S))}catch(e){}},st=r=>S.stats[r]=S.stats[r]||{n:0,a:0,r:0};
+const stop=new Set('the a an and or of is are to in for with our your it this that from by on at as be'.split(' '));
+const tok=s=>new Set((s.toLowerCase().match(/[a-z]{3,}/g)||[]).filter(w=>!stop.has(w))),nums=s=>(s.match(/\d[\d,.]*/g)||[]).map(n=>n.replace(/[,.]$/,''));
+function review(t){const F=[],kb=S.kb,add=(a,b,type,sev,rule,why,fix)=>F.push({s:a,e:b,t:t.slice(a,b),type,sev,rule,why,fix});let m;
+kb.b.forEach(x=>{const re=new RegExp('\\b'+x.term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi');while(m=re.exec(t))add(m.index,m.index+m[0].length,'Terminology/tone','medium',x.rule,'“'+x.term+'” is not on-brand.',x.fix)});
+let r=/!{2,}/g;while(m=r.exec(t))add(m.index,m.index+m[0].length,'Tone','medium','V-3','Repeated exclamation marks.','.');
+r=/\b[A-Z]{4,}\b/g;while(m=r.exec(t))add(m.index,m.index+m[0].length,'Tone','medium','V-3','All-caps reads as shouting.',m[0][0]+m[0].slice(1).toLowerCase());
+r=/!\[\s*\]\([^)]*\)/g;while(m=r.exec(t))add(m.index,m.index+m[0].length,'Accessibility','high','A-1','Image has no alt text.',m[0].replace('![]','![Describe the image]'));
+r=/[^.!?\n]+[.!?]*/g;while(m=r.exec(t)){const lead=m[0].length-m[0].trimStart().length,x=m[0].trim();if(!x)continue;const a=m.index+lead,b=a+x.length,tk=tok(x);let best=null,sc=0;
+kb.f.forEach(f=>{const ft=tok(f.text);let o=0;tk.forEach(w=>ft.has(w)&&o++);const s=o/Math.max(1,Math.min(tk.size,ft.size));if(s>sc){sc=s;best=f}});
+const sn=nums(x),fn=best?nums(best.text):[];
+if(best&&sc>=.5&&sn.length&&fn.length&&sn.join()!=fn.join())add(a,b,'Outdated fact','high',best.id,'Numbers differ from the approved fact.',best.text+'.');
+else if(!(best&&sc>=.5)&&/\b(best|healthiest|#1|number one|clinically proven|guaranteed|100%|cures?|world['’]s)\b/i.test(x))add(a,b,'Unsupported claim','high','C-2','No approved support found. This is not proven false; a reviewer must decide.',best&&sc>.15?best.text+'.':'');
+if(x.split(/\s+/).length>30)add(a,b,'Readability','low','A-3','Sentence is over 30 words.','')}
+return F.sort((a,b)=>a.s-b.s)}
+function run(){const ai=(S.ai||[]).map(x=>{const s=S.text.indexOf(x.t);return s<0?null:{...x,s,e:s+x.t.length}}).filter(Boolean);S.f=review(S.text).concat(ai).filter(f=>!S.rej[f.rule+'|'+f.t]).sort((a,b)=>a.s-b.s);S.f.forEach(f=>{const k=f.rule+'|'+f.t;if(!S.seen[k]){S.seen[k]=1;st(f.rule).n++}});save()}
+const log=a=>{S.log.unshift({t:new Date().toLocaleString(),r:S.role,a});save()},ver=n=>S.v.push({n:S.v.length+1,t:S.text,by:S.role,ts:new Date().toLocaleString(),note:n});
+const can=()=>S.role=='Creator'&&['Draft','Changes requested'].includes(S.status);
+function apply(i,fix,how){const f=S.f[i];S.text=S.text.slice(0,f.s)+fix+S.text.slice(f.e);st(f.rule).a++;ver(how+' '+f.rule);log(how+' fix for '+f.rule+' ('+f.type+')');run();draw()}
+const acc=i=>apply(i,S.f[i].fix,'accepted'),edt=i=>{const f=S.f[i],x=prompt('Your wording:',f.fix||f.t);if(x!==null)apply(i,x,'edited')};
+function rej(i){const f=S.f[i],why=prompt('Why do you disagree? (optional, helps us find unclear rules)')||'';S.rej[f.rule+'|'+f.t]=1;st(f.rule).r++;if(why)S.com.push({r:S.role,t:'Disputed '+f.rule+': '+why});log('rejected finding '+f.rule);run();draw()}
+function flow(a){const hi=S.f.filter(f=>f.sev=='high').length;
+if(a=='sub'){ver('submitted');S.status='Submitted';log('submitted for approval')}
+if(a=='ok'){if(hi){const r=prompt(hi+' high-severity finding(s) are still open. Enter a reason to override and approve:');if(!r)return;S.over++;log('OVERRIDE approval: '+r)}S.status='Approved';log('approved')}
+if(a=='chg'){const r=prompt('What should change?');if(!r)return;S.com.push({r:S.role,t:r});S.status='Changes requested';log('requested changes')}
+save();draw()}
+const lum=h=>{const c=[1,3,5].map(i=>parseInt(h.substr(i,2),16)/255).map(v=>v<=.03928?v/12.92:((v+.055)/1.055)**2.4);return .2126*c[0]+.7152*c[1]+.0722*c[2]},ratio=(a,b)=>{const x=lum(a),y=lum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+const dist=(a,b)=>[1,3,5].reduce((s,i)=>s+Math.abs(parseInt(a.substr(i,2),16)-parseInt(b.substr(i,2),16)),0);
+const src=id=>{const x=S.kb.g.find(g=>g.id==id)||S.kb.f.find(g=>g.id==id);return x?E(id+': '+x.text):'<b>unverified</b> (no source '+E(id)+')'};
+function hl(){let o='',p=0;S.f.forEach(f=>{if(f.s<p)return;o+=E(S.text.slice(p,f.s))+'<mark class="'+f.sev+'">'+E(S.text.slice(f.s,f.e))+'</mark>';p=f.e});return o+E(S.text.slice(p))}
+const T={
+Review(){const ed=can();return `<div class="c"><b>Status:</b> <span class="tag ${S.status=='Approved'?'ok':''}">${S.status}</span> <span class="m">Nothing is auto-published or auto-rewritten.</span>
+<textarea id="ta" ${ed?'':'readonly'} aria-label="Draft content">${E(S.text)}</textarea>
+<p><button class="p" onclick="S.text=$('#ta').value;run();draw()">Run review</button> ${AI?'<button id="ai" onclick="aiRev()">AI deep review</button> ':''}<button ${ed?'':'disabled'} onclick="flow('sub')">Submit for approval</button>
+<button ${S.role!='Creator'&&S.status=='Submitted'?'':'disabled'} class="p" onclick="flow('ok')">Approve</button> <button ${S.role!='Creator'&&S.status=='Submitted'?'':'disabled'} onclick="flow('chg')">Request changes</button>
+<button onclick="if(confirm('Reset demo data?')){localStorage.removeItem('bl4');location.reload()}">Reset demo</button></p><p class="m">Creators edit and resolve findings. Managers and reviewers approve or request changes.</p></div>
+<div class="c"><b>Highlighted draft</b><div class="pv">${hl()}</div></div><div class="c"><b>Findings (${S.f.length})</b>${S.f.map((f,i)=>`<div class="f ${f.sev}"><b>${f.type}</b> <span class="tag">${f.sev}</span> “${E(f.t)}”<div>${E(f.why)}</div><div class="m">Source: ${src(f.rule)}</div>${f.fix?`<div>Suggested: <b>${E(f.fix)}</b></div>`:'<div class="m">No safe suggestion. Remove the claim or ask a reviewer for a source.</div>'}
+<button ${ed&&f.fix?'':'disabled'} onclick="acc(${i})">Accept</button> <button ${ed?'':'disabled'} onclick="edt(${i})">Edit</button> <button ${ed?'':'disabled'} onclick="rej(${i})">Reject / dispute</button></div>`).join('')||'<p class="m">No findings. Press Run review.</p>'}</div>
+<div class="c"><b>Comments</b>${S.com.map(c=>`<p><span class="tag">${c.r}</span> ${E(c.t)}</p>`).join('')}<input id="cm" placeholder="Add a comment"> <button onclick="if($('#cm').value){S.com.push({r:S.role,t:$('#cm').value});log('commented');draw()}">Post</button></div>`},
+'Knowledge base'(){const a=S.role=='Admin',d=a?'':'readonly';return `<div class="c"><b>Brand knowledge base</b> <span class="m">${a?'Admin can edit.':'Switch role to Admin to edit.'} One item per line.</span>
+<p>Guidelines (ID | text)</p><textarea id="kg" ${d}>${E(S.kb.g.map(x=>x.id+' | '+x.text).join('\n'))}</textarea><p>Approved facts (ID | text)</p><textarea id="kf" ${d}>${E(S.kb.f.map(x=>x.id+' | '+x.text).join('\n'))}</textarea>
+<p>Banned terms (term | fix | rule ID)</p><textarea id="kb" ${d}>${E(S.kb.b.map(x=>[x.term,x.fix,x.rule].join(' | ')).join('\n'))}</textarea><p><button class="p" ${a?'':'disabled'} onclick="saveKB()">Save knowledge base</button></p></div>`},
+Visual(){return `<div class="c"><b>Colour and contrast check (WCAG 2.1)</b><p>Text <input type="color" id="fg" value="#1b2330"> Background <input type="color" id="bgc" value="#ffffff"> <button class="p" onclick="vis()">Check</button></p><div id="vr" class="m">Pick two colours.</div><p class="m">Brand palette: ${S.kb.pal.map(c=>`<span class="tag" style="background:${c};color:${lum(c)>.4?'#000':'#fff'}">${c}</span>`).join(' ')}</p></div>`},
+Insights(){const r=Object.entries(S.stats).sort((a,b)=>b[1].n-a[1].n),mx=Math.max(1,...r.map(x=>x[1].n));return `<div class="c"><b>Governance insights</b><p class="m">Approvals with override: ${S.over}. Rules that people often reject are flagged as possibly unclear.</p><div class="w"><table><tr><th>Rule</th><th>Flagged</th><th>Accepted</th><th>Rejected</th><th></th></tr>${r.map(([k,v])=>`<tr><td>${src(k)}</td><td>${v.n}<div class="b" style="width:${v.n/mx*100}%"></div></td><td>${v.a}</td><td>${v.r}</td><td>${v.r>=1&&v.r/Math.max(1,v.a+v.r)>=.5?'<span class="tag" style="background:var(--me)">guideline may be unclear</span>':''}</td></tr>`).join('')||'<tr><td>Run a review first.</td></tr>'}</table></div></div>`},
+Audit(){return `<div class="c"><b>Disclosure</b><p>Rule checks run in your browser. The optional “AI deep review” button sends the draft and the knowledge base to Claude (Anthropic) after the viewer consents; its findings are labelled AI, cite a listed source or show “unverified”, and need human review. Without that button no AI or external service is used. Data stays in this browser’s local storage.</p></div><div class="c"><b>Versions (${S.v.length})</b>${S.v.map(v=>`<details><summary>v${v.n} · ${v.by} · ${v.note} · ${v.ts}</summary><div class="pv m">${E(v.t)}</div></details>`).join('')||'<p class="m">No versions yet.</p>'}</div><div class="c"><b>Audit log</b>${S.log.map(l=>`<div class="m">${l.t} · <b>${l.r}</b> · ${E(l.a)}</div>`).join('')||'<p class="m">Empty.</p>'}</div>`}};
+function saveKB(){const p=id=>$(id).value.split('\n').map(l=>l.split('|').map(x=>x.trim())).filter(a=>a[0]);S.kb.g=p('#kg').map(a=>({id:a[0],text:a[1]||''}));S.kb.f=p('#kf').map(a=>({id:a[0],text:a[1]||''}));S.kb.b=p('#kb').map(a=>({term:a[0],fix:a[1]||'',rule:a[2]||'T-1'}));log('updated knowledge base');run();draw()}
+function vis(){const f=$('#fg').value,b=$('#bgc').value,r=ratio(f,b),off=!S.kb.pal.some(c=>dist(c.toLowerCase(),f)<60);$('#vr').innerHTML=`Contrast <b>${r.toFixed(2)}:1</b> · ${r>=4.5?'passes':'fails'} AA (4.5:1) · text colour is ${off?'<b>off-palette</b>':'on-palette'}. Source: ${src('A-2')}`;log('contrast check '+r.toFixed(2))}
+function draw(){$('#nav').innerHTML=Object.keys(T).map(t=>`<button class="${S.tab==t?'on':''}" onclick="S.tab='${t}';draw()">${t}</button>`).join('');$('#v').innerHTML=T[S.tab]();$('#role').value=S.role;save()}
+$('#role').innerHTML=['Creator','Manager','Reviewer','Admin'].map(r=>`<option>${r}</option>`).join('');$('#role').onchange=e=>{S.role=e.target.value;draw()};
+let AI=null;(async()=>{try{if(window.claude){AI=await claude.use('sample');if(AI)draw()}}catch(e){}})();
+async function aiRev(){const b=$('#ai');b.disabled=true;b.textContent='Reviewing…';try{const k=S.kb,p='You are a brand-governance reviewer. Use ONLY the guidelines and approved facts below. Return ONLY a JSON array (no markdown) of up to 8 issues a rule-based checker may miss (tone, messaging, unsupported or contradicted claims). Each item: {"quote":"exact substring of the draft","type":"Tone|Messaging|Claim","severity":"high|medium|low","source":"guideline or fact ID from the lists, or none","why":"one sentence","fix":"replacement for the quote that keeps the author intent, or empty string"}.\nGUIDELINES:\n'+k.g.map(x=>x.id+': '+x.text).join('\n')+'\nFACTS:\n'+k.f.map(x=>x.id+': '+x.text).join('\n')+'\nDRAFT:\n'+S.text,a=await AI.json(p);S.ai=(Array.isArray(a)?a:[]).filter(x=>x&&x.quote&&S.text.indexOf(x.quote)>=0).map(x=>({t:x.quote,type:'AI · '+x.type,sev:['high','medium','low'].includes(x.severity)?x.severity:'medium',rule:x.source||'none',why:(x.why||'')+' (AI-generated: needs human check)',fix:x.fix||''}));log('AI deep review: '+S.ai.length+' findings');run();draw()}catch(e){alert('AI review unavailable: '+(e.message||e.code||'error'));const c=$('#ai');if(c){c.disabled=false;c.textContent='AI deep review'}}}
+run();draw();
+</script></body></html>
